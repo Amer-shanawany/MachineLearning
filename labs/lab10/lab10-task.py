@@ -5,22 +5,10 @@ import numpy
 from random import *
 
 # Importeren van MNIST dataset
-#(x_train, y_train),(x_test, y_test) = mnist.load_data()
 (input_train, target_train), (input_test, target_test) = emnist.load_data(type='letters')
-# 	Image toenen 
-#plt.imshow(input_train[0])
-#plt.show()
-# 	Image toenen in grayscale 
-#plt.imshow(input_train[0], cmap = plt.cm.binary)
-#plt.show()
-#print(input_train[0])
 
 #	Data normaliseren
 input_train = tf.keras.utils.normalize(input_train, axis = 1 )
-
-# Image toenen na de normalizastie 
-#.imshow(input_train[0], cmap = plt.cm.binary)
-#plt.show()
 
 # Model opbouwen
 model = tf.keras.models.Sequential()
@@ -35,7 +23,7 @@ model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
 model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
 
 # Toevoegen van de derde laag  : softmax , 26 neuronen output 
-model.add(tf.keras.layers.Dense(33, activation=tf.nn.softmax))
+model.add(tf.keras.layers.Dense(32, activation=tf.nn.softmax))
 
 # Model compileren
 model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
