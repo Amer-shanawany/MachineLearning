@@ -1,0 +1,116 @@
+---
+title: "opdracht11"
+author: "Amer"
+date: "12/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r }
+library(data.table)
+library(magrittr)
+library(mosaicData)
+library(reticulate)
+library(knitr)
+library(zoo)
+
+set.seed(42)
+
+abuse <- HELPfull %>% data.table
+abuse %>% head %>% kable
+keep <- colnames(abuse)[abuse %>% lapply(class) %in% c("numeric", "integer")]
+abuse <- abuse %>% 
+  extract(, keep, with = FALSE) %>%
+  dcast(ID ~ TIME, value.var = names(.) %>% setdiff(c("ID", "TIME")))
+
+drop <- colnames(abuse)[abuse %>% is.na %>% not %>% colSums %>% equals(0)]
+
+nonempty <- abuse %>% names %>% setdiff(drop)
+
+abuse <- abuse[, nonempty, with = FALSE] %>% na.aggregate
+
+
+nonempty_x <- grep("_(0|6)$", nonempty, value = TRUE)
+nonempty_x <- nonempty_x[!grepl("B9H", nonempty_x)]
+
+abuse_x <- abuse[, nonempty_x, with = FALSE]
+
+trn_set <- abuse %>% nrow %>% runif %>% is_less_than(4/5)
+
+x_trn <- abuse_x[trn_set]
+x_tst <- abuse_x[!trn_set]
+
+y_trn <- abuse[trn_set, 1 - (B9H_24 - 1) / 5]
+y_tst <- abuse[!trn_set, 1 - (B9H_24 - 1) / 5]
+
+cbind(y_trn, x_trn) %>% fwrite("dat/trn.tsv", sep = "\t")
+cbind(y_tst, x_tst) %>% fwrite("dat/tst.tsv", sep = "\t")
+
+
+```
+```{python, eval=True}
+#check your python environment
+import sys
+print(sys.path)
+
+```
+
+```{sh, eval=FALSE}
+#https://python-forum.io/Thread-pip-install-pandas-ERROR?pid=80687
+python -m pip install --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --trusted-host pypi.org --upgrade pip
+pip install --trusted-host=pypi.org --trusted-host=files.pythonhosted.org pandas
+python -m pip install pandas --proxy="proxy.com:8080"
+
+pip install tensorflow==2.3
+pip list
+```
+
+
+
+```{python antwoord, eval=TRUE}
+import numpy as np
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import TensorBoard
+from datetime import datetime
+import pandas
+
+log_dir = "tf/"+ (datetime.now()).strftime("%Y-%m-%d_%H.%M.%S")
+model = Sequential()
+x = r.x_trn.shape[1]
+model.add(Dense(788, input_shape=[r.x_trn.shape[1]]))
+
+model.add(Dense(1472))
+model.add(Dense(1, activation = "sigmoid"))
+
+
+model.compile(optimizer='adam',loss = 'mean_squared_error' ,metrics=['accuracy'] ) 
+ 
+accuracy = model.fit(
+  np.asarray(r.x_trn),
+  np.asarray(r.y_trn),
+  epochs = 5,
+  batch_size = 2,
+  validation_split = 0.2,
+  verbose = 1,
+  callbacks = [TensorBoard(log_dir = log_dir)])
+
+predictions = model.predict(np.asarray(r.x_tst))
+
+```
+
+```{r evaluatie, eval=FALSE}
+py$accuracy$history %>%
+  as.data.table %>%
+  extract(, .(accuracy, val_accuracy)) %>%
+  ts %>% 
+  plot (main = "Evolution of accuracy")
+
+py$predictions %>% cbind(y_tst) %>% plot
+
+cor(py$predictions, y_tst)
+```
